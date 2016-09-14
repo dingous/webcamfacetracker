@@ -1,0 +1,407 @@
+﻿<!DOCTYPE html>
+<html>
+
+<meta http-equiv="content-type" content="text/html;charset=UTF-8" />
+
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Dingous - WebCam Face Tracker</title>
+	<!-- CSS -->
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,600,500,700">
+	<link rel="stylesheet" href="../../maxcdn.bootstrapcdn.com/font-awesome/4.6.1/css/font-awesome.min.css">
+	<link rel="stylesheet" href="../../cdnjs.cloudflare.com/ajax/libs/cropper/2.3.0/cropper.min.css">
+	<link rel="stylesheet" href="assets/css/demo.css">
+	<link rel="stylesheet" href="assets/css/filepicker.css">
+
+
+
+
+	<style>
+		.crop-btn {
+			width: 93px;
+		}
+
+		.delete-btn {
+			width: 99px;
+		}
+
+		#facetrace {
+			width: 200px;
+			height: 282px;
+			margin-left: -100px; /* metade da largura */
+			margin-top: -170px; /* metade da altura */
+			position: absolute;
+			top: 50%;
+			left: 50%;
+		}
+	</style>
+</head>
+<body>
+
+
+	<div class="container">
+		<div class="demo-container col-md-9 col-md-offset-2">
+			<ul class="nav nav-tabs demo-nav-tabs">
+				<li class="active"><a href="avatar.html">Avatar</a></li>
+			</ul>
+
+
+			<p>
+				<!-- Display the avatar -->
+				<img src="https://www.gravatar.com/avatar/?d=mm&amp;s=300" class="avatar" width="200">
+			</p>
+			<div id="filepicker">
+				<!-- Button Bar -->
+				<div class="button-bar">
+					<div>
+						<div class="btn btn-success fileinput">
+							<i class="fa fa-arrow-circle-o-up"></i>Upload
+							<input type="file" name="files[]">
+						</div>
+						<button type="button" class="btn btn-primary camera-show">
+							<i class="fa fa-camera"></i>Câmera
+						</button>
+					</div>
+					<div>
+						<!-- Here we set the `data-fileurl` attribute with the original image source
+							 that it will be used when cropping the image. -->
+						<button type="button" class="btn btn-info crop-btn"
+							style="display: none;" data-fileurl="">
+							<i class="fa fa-crop"></i>Crop
+						</button>
+						<!-- Here we set the `data-fileurl` attribute with the original image source
+							 that will be used when deleting the file. -->
+						<button type="button" class="btn btn-danger delete-btn"
+							style="display: none;" data-fileurl="">
+							<i class="fa fa-trash-o"></i>Delete
+						</button>
+					</div>
+				</div>
+				<!-- Drop Window -->
+				<div class="drop-window fade">
+					<div class="drop-window-content">
+						<h3><i class="fa fa-upload"></i>Drop files to upload</h3>
+					</div>
+				</div>
+			</div>
+			<!-- end of #filepicker -->
+		</div>
+	</div>
+	<!-- Crop Modal -->
+	<div id="crop-modal" class="modal fade" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<span class="close" data-dismiss="modal">&times;</span>
+					<h4 class="modal-title">Make a selection</h4>
+				</div>
+				<div class="modal-body">
+					<div class="alert alert-warning crop-loading">Loading image...</div>
+					<div class="crop-preview"></div>
+				</div>
+				<div class="modal-footer">
+					<div class="crop-rotate">
+						<button type="button" class="btn btn-default btn-sm crop-rotate-left" title="Rotate left">
+							<i class="fa fa-undo"></i>
+						</button>
+						<button type="button" class="btn btn-default btn-sm crop-flip-horizontal" title="Flip horizontal">
+							<i class="fa fa-arrows-h"></i>
+						</button>
+						<!-- <button type="button" class="btn btn-default btn-sm crop-flip-vertical" title="Flip vertical">
+							<i class="fa fa-arrows-v"></i>
+						</button> -->
+						<button type="button" class="btn btn-default btn-sm crop-rotate-right" title="Rotate right">
+							<i class="fa fa-repeat"></i>
+						</button>
+					</div>
+					<button type="button" class="btn btn-default pull-left" data-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-success crop-save" data-loading-text="Saving...">Save</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- end of #crop-modal -->
+	<!-- Camera Modal -->
+	<div id="camera-modal" class="modal fade" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<span class="close" data-dismiss="modal">&times;</span>
+					<h4 class="modal-title">Tire uma foto</h4>
+				</div>
+				<div class="modal-body">
+
+					<div class="camera-preview"></div>
+
+
+					<!--<canvas id="compare" style="display: none"></canvas>
+					<canvas id="overlay"></canvas>
+					<canvas id="debug"></canvas>-->
+
+
+					<p id='gUMMessage'></p>
+					<p>Status : <span id='headtrackerMessage'></span></p>
+					<p>
+						<input type="button" onclick="document.getElementById('overlay').getContext('2d').clearRect(0, 0, vWidth, vHeight); htracker.stop(); htracker.start(); " value="reinicializar detecção de rosto"></input>
+						<br />
+						<br />
+						<input type="checkbox" onclick="showProbabilityCanvas()" value="asdfasd"></input>Exibir mapa-probabilidade
+					</p>
+
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-default pull-left camera-hide" data-dismiss="modal">Cancelar</button>
+					<button type="button" class="btn btn-success camera-capture">Tirar foto</button>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!-- end of #camera-modal -->
+	<!-- Scripts -->
+	<script src="../../code.jquery.com/jquery-1.12.3.min.js"></script>
+	<script src="../../maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+	<script src="../../cdnjs.cloudflare.com/ajax/libs/cropper/2.3.0/cropper.min.js"></script>
+	<script src="assets/js/filepicker.js"></script>
+	<script src="assets/js/filepicker-drop.js"></script>
+	<script src="assets/js/filepicker-crop.js"></script>
+	<script src="assets/js/filepicker-camera.js"></script>
+
+	<!-- Face Tracking -->
+	<script src="assets/js/headtrackr.js"></script>
+
+
+
+	<script>
+		var cropBtn = $('.crop-btn');
+		var deleteBtn = $('.delete-btn');
+
+		var filePicker = $('#filepicker').filePicker({
+			//url: 'uploader/avatar.php',
+			url: 'uploader/Upload.aspx',
+			acceptedFiles: /(\.|\/)(gif|jpe?g|png)$/i,
+			plugins: ['drop', 'camera', 'crop'],
+			crop: {
+				aspectRatio: 1, // Square
+				showBtn: cropBtn
+			}
+		})
+        .on('add.filepicker', function (e, data) {
+        	var file = data.files[0];
+
+        	if (file.error) {
+        		e.preventDefault();
+        		alert(file.error);
+        	}
+        })
+        .on('done.filepicker', function (e, data) {
+        	// Here the file has been uploaded.
+        	var file = data.files[0];
+
+        	if (file.error) {
+        		alert(file.error);
+        	} else {
+        		// Show the crop modal.
+        		$(this).filePicker().plugins.crop.show(file.url);
+        	}
+        })
+        .on('cropsave.filepicker', function (e, file) {
+        	// Here the image has been cropped.
+
+        	// Update the avatar image.
+        	$('.avatar').attr('src', file.versions.avatar.url + '?' + new Date().getTime());
+
+        	// Update the button fileurl.
+        	cropBtn.data('fileurl', file.url).show();
+        	deleteBtn.data('file', file.name).show();
+        })
+        .on('fail.filepicker', function () {
+        	alert('Oops! Something went wrong.');
+
+        });
+
+
+		// When clicking on the delete button delete the file.
+		deleteBtn.on('click', function () {
+			// Delete the file.
+			$('#filepicker').filePicker().delete($(this).data('file'));
+
+			// Reset default avatar.
+			$('.avatar').attr('src', 'https://www.gravatar.com/avatar/?d=mm&amp;s=300');
+
+			// Hide crop and delete buttons.
+			cropBtn.hide();
+			deleteBtn.hide();
+		});
+
+
+
+		/*Tacker*/
+		var htracker = null;
+		var allowTracker = true;
+		var vWidth = 0;
+		var vHeight = 0;
+
+
+		function showProbabilityCanvas() {
+			var debugCanvas = document.getElementById('debug');
+			if (debugCanvas.style.display == 'none') {
+				debugCanvas.style.display = 'block';
+			} else {
+				debugCanvas.style.display = 'none';
+			}
+		}
+
+
+		function createCanvas() {
+
+			$("#compare").remove();
+			$("#overlay").remove();
+			$("#debug").remove();
+			$(".camera-preview").append('<canvas id="compare" style="display: none"></canvas>');
+			$(".camera-preview").append('<canvas id="overlay"></canvas>');
+			$(".camera-preview").append('<canvas id="debug"></canvas>');
+		}
+
+
+		function tracking(width, height) {
+
+			htracker = null;
+
+			if (allowTracker) {
+
+				createCanvas();
+
+				var videoInput = document.getElementById('vid');
+				var canvasInput = document.getElementById('compare');
+				var canvasOverlay = document.getElementById('overlay')
+				var debugOverlay = document.getElementById('debug');
+				var overlayContext = canvasOverlay.getContext('2d');
+
+				vWidth = $(".camera-preview").width();
+				vHeight = $(".camera-preview").height();
+				canvasOverlay.getContext('2d').clearRect(0, 0, vWidth, vHeight);
+
+				console.log(vWidth);
+				console.log(vHeight);
+
+				var img = '<div class="col-lg-4 col-md-9 col-xs-12 responsive-image" id="facetrace"  style="background-image: url(assets/facetrace.png)"></div>';
+				$(".camera-preview").append(img);
+
+				vWidth = parseInt(vWidth);
+				vHeight = parseInt(vHeight) - 314;
+
+
+				console.log(vWidth);
+				console.log(vHeight);	 
+				
+				$(canvasInput).attr("width", vWidth);
+				$(canvasInput).attr("height", vHeight);
+
+				$(canvasOverlay).attr("width", vWidth);
+				$(canvasOverlay).attr("height", vHeight);
+
+
+				$(debugOverlay).attr("width", vWidth);
+				$(debugOverlay).attr("height", vHeight);
+
+
+				canvasOverlay.style.position = "absolute";
+				canvasOverlay.style.top = '0px';
+				canvasOverlay.style.zIndex = '100001';
+				canvasOverlay.style.display = 'block';
+				debugOverlay.style.position = "absolute";
+				debugOverlay.style.top = '0px';
+				debugOverlay.style.zIndex = '100002';
+				debugOverlay.style.display = 'none';
+
+				// add some custom messaging
+
+				statusMessages = {
+					"whitebalance": "Checando a estabilidade da câmera whitebalance",
+					"detecting": "Detectando seu rosto",
+					"hints": "Hmm. Detectar o rosto está tomando um longo tempo",
+					"redetecting": "Faixa perdida do rosto, detectando novamente",
+					"lost": "Faixa perdida de rosto",
+					"found": "Rosto detectado"
+				};
+
+				supportMessages = {
+					"no getUserMedia": "Unfortunately, <a href='http://dev.w3.org/2011/webrtc/editor/getusermedia.html'>getUserMedia</a> is not supported in your browser. Try <a href='http://www.opera.com/browser/'>downloading Opera 12</a> or <a href='http://caniuse.com/stream'>another browser that supports getUserMedia</a>. Now using fallback video for facedetection.",
+					"no camera": "No camera found. Using fallback video for facedetection."
+				};
+
+
+				document.removeEventListener("headtrackrStatus", null);
+				document.addEventListener("headtrackrStatus", function (event) {
+
+					$(".btn.btn-success.camera-capture").prop('disabled', true);
+
+					if (event.status in supportMessages) {
+						var messagep = document.getElementById('gUMMessage');
+						messagep.innerHTML = supportMessages[event.status];
+					} else if (event.status in statusMessages) {
+						var messagep = document.getElementById('headtrackerMessage');
+						messagep.innerHTML = statusMessages[event.status];
+					}
+
+
+					if (event.status == "found") {
+						$(".btn.btn-success.camera-capture").prop('disabled', false);
+						window.focus();
+					}
+
+				}, true);
+
+				// the face tracking setup	
+				htracker = new headtrackr.Tracker
+					({
+						altVideo: { ogv: "./media/capture5.ogv", mp4: "./media/capture5.mp4" },
+						calcAngles: true,
+						ui: false,
+						headPosition: false,
+						debug: debugOverlay,
+						detectionInterval: 10
+					});
+
+
+				htracker.init(videoInput, canvasInput, false);
+				htracker.start();
+
+				// for each facetracking event received draw rectangle around tracked face on canvas  				
+				document.removeEventListener("facetrackingEvent", null);
+				document.addEventListener("facetrackingEvent", function (event) {
+					// clear canvas
+					overlayContext.clearRect(0, 0, vWidth, vHeight);
+					// once we have stable tracking, draw rectangle
+					if (event.detection == "CS") {
+
+						overlayContext.translate(event.x, event.y)
+						overlayContext.rotate(event.angle - (Math.PI / 2));
+						overlayContext.strokeStyle = "#00CC00";
+						overlayContext.strokeRect((-(event.width / 2)) >> 0, (-(event.height / 2)) >> 0, event.width, event.height);
+						overlayContext.rotate((Math.PI / 2) - event.angle);
+						overlayContext.translate(-event.x, -event.y);
+						//overlayContext.scale(-1, 1);
+
+					}
+				});
+
+			}
+		}
+
+		$('#camera-modal').on('show.bs.modal', function (event) { });
+		$('#camera-modal').on('hidden.bs.modal', function (e) { document.getElementById('overlay').getContext('2d').clearRect(0, 0, vWidth, vHeight); htracker.stop(); });
+
+
+		$(window).resize(function () {
+
+			tracking(vWidth, vHeight);
+
+		});
+
+	</script>
+</body>
+
+</html>
